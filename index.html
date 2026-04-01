@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overlap Analysis: retrospective-provenance vs obra/superpowers (14) AND LFA Marketplace (20)</title>
+<style>
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface-2: #1c1c1c; --border: #2a2a2a;
+    --text: #e5e5e5; --muted: #888; --accent: #3b82f6;
+    --red: #ef4444; --red-dim: #450a0a; --green: #22c55e; --green-dim: #14532d;
+    --yellow: #eab308; --yellow-dim: #422006; --purple: #a78bfa; --purple-dim: #2e1065;
+    --orange: #f97316; --orange-dim: #431407;
+    --mono: 'SF Mono', 'Cascadia Code', monospace; --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.55; padding: 2rem; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 2rem; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+
+  .verdict-box { padding: 1.25rem; border-radius: 8px; margin: 1.5rem 0; font-size: 0.95rem; }
+  .verdict-box.unique { background: var(--green-dim); border: 1px solid rgba(34, 197, 94, 0.3); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0; }
+  th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--surface); }
+
+  .badge { display: inline-block; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.15rem 0.4rem; border-radius: 3px; font-family: var(--mono); }
+  .badge-none { background: var(--green-dim); color: var(--green); }
+  .badge-low { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-obra { background: var(--purple-dim); color: var(--purple); border: 1px solid var(--purple); }
+  .badge-lfa { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+  .badge-both { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin: 0.75rem 0; }
+  .card-title { font-weight: 600; margin-bottom: 0.5rem; }
+
+  .axis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .axis-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .axis-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
+  .axis-list { font-size: 0.85rem; }
+  .axis-list li { margin: 0.25rem 0; padding-left: 0; list-style: none; }
+  .axis-list li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle; }
+  .retro li::before { background: var(--accent); }
+  .existing li::before { background: var(--purple); }
+
+  code { font-family: var(--mono); font-size: 0.8em; background: var(--surface-2); padding: 0.1rem 0.35rem; border-radius: 3px; color: var(--accent); }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+  .stat-value { font-size: 2rem; font-weight: 700; font-family: var(--mono); }
+  .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+  .meta { font-size: 0.75rem; color: var(--muted); margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  @media (max-width: 800px) { .axis-grid, .stat-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Overlap Analysis: retrospective-provenance</h1>
+<p class="subtitle">Compared against <strong>both</strong> skill ecosystems: obra/superpowers upstream (14 skills) AND LFA Marketplace fork (20 skills)<br>
+<span class="badge badge-obra">obra</span> = upstream only &nbsp;&nbsp;
+<span class="badge badge-lfa">LFA only</span> = LFA marketplace additions &nbsp;&nbsp;
+<span class="badge badge-both">Both</span> = present in both ecosystems</p>
+
+<!-- ================================================================== -->
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-value" style="color:var(--purple)">14</div>
+    <div class="stat-label">obra/superpowers skills</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--orange)">20</div>
+    <div class="stat-label">LFA marketplace skills</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--green)">0 / 20</div>
+    <div class="stat-label">Duplications found</div>
+  </div>
+</div>
+
+<div class="verdict-box unique">
+  <div class="verdict-title">Verdict: No Duplication in Either Ecosystem</div>
+  <p><code>retrospective-provenance</code> is the only skill that looks <strong>backward</strong> at completed work. All 20 LFA skills (including the 6 additions beyond obra) look <strong>forward</strong>. The LFA-only skills add depth to DURING-building (debugging techniques, test quality, validation layers) but none address post-completion analysis, provenance tracing, or ecosystem classification.</p>
+</div>
+
+<!-- ================================================================== -->
+<h2>Full Skill-by-Skill Overlap Assessment (All 20)</h2>
+
+<h3>Shared Skills (14 — present in both obra and LFA)</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Skill</th>
+      <th>Ecosystem</th>
+      <th>Overlap</th>
+      <th>What It Does</th>
+      <th>How retrospective-provenance Differs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>brainstorming</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Explores user intent, produces design specs before building</td>
+      <td>Retrospective detects whether brainstorming <em>was used</em> (checks for docs/superpowers/specs/). Observer, not participant.</td>
+    </tr>
+    <tr>
+      <td><code>writing-plans</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Creates implementation plans for future work</td>
+      <td>Retrospective detects whether plans <em>were created</em> and whether they preceded implementation.</td>
+    </tr>
+    <tr>
+      <td><code>executing-plans</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Executes a plan with checkpoints in a separate session</td>
+      <td>No overlap. Execution is forward; retrospective is backward.</td>
+    </tr>
+    <tr>
+      <td><code>test-driven-development</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Enforces RED-GREEN-REFACTOR during implementation</td>
+      <td><strong>Enforcer</strong> vs <strong>Detective</strong>: TDD prevents non-TDD; retrospective detects it after the fact by comparing feat: vs test: timestamps.</td>
+    </tr>
+    <tr>
+      <td><code>requesting-code-review</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Dispatches reviewer to evaluate code quality between SHAs</td>
+      <td>Reviews <em>what</em> was built for correctness. Retrospective analyzes <em>how</em> it was built — tools, skills, ecosystem provenance.</td>
+    </tr>
+    <tr>
+      <td><code>verification-before-completion</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Requires running tests/builds before claiming done</td>
+      <td>Forward-looking gate. Retrospective looks backward to detect where verification was missing.</td>
+    </tr>
+    <tr>
+      <td><code>systematic-debugging</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Four-phase root-cause investigation of specific bugs</td>
+      <td>Retrospective is not debugging. It's meta-analysis of the development process.</td>
+    </tr>
+    <tr>
+      <td><code>subagent-driven-development</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Dispatches fresh subagent per task with two-stage review</td>
+      <td>No overlap. SDD is execution orchestration.</td>
+    </tr>
+    <tr>
+      <td><code>dispatching-parallel-agents</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Parallelizes 3+ independent investigation tasks</td>
+      <td>No overlap.</td>
+    </tr>
+    <tr>
+      <td><code>finishing-a-development-branch</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Guides merge/PR/cleanup at branch completion</td>
+      <td>No overlap.</td>
+    </tr>
+    <tr>
+      <td><code>receiving-code-review</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Handles incoming review feedback with rigor</td>
+      <td>No overlap.</td>
+    </tr>
+    <tr>
+      <td><code>using-git-worktrees</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Creates isolated workspaces for feature development</td>
+      <td>No overlap.</td>
+    </tr>
+    <tr>
+      <td><code>using-superpowers</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Skill discovery and routing at session start</td>
+      <td>No overlap. This skill would be discovered <em>by</em> using-superpowers.</td>
+    </tr>
+    <tr>
+      <td><code>writing-skills</code></td>
+      <td><span class="badge badge-both">Both</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>TDD workflow for creating new skills</td>
+      <td>No overlap. writing-skills was used <em>to create</em> retrospective-provenance.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>LFA-Only Skills (6 — not in obra/superpowers upstream)</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Skill</th>
+      <th>Ecosystem</th>
+      <th>Overlap</th>
+      <th>What It Does</th>
+      <th>How retrospective-provenance Differs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>condition-based-waiting</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Replaces arbitrary timeouts with condition polling. Fixes flaky tests caused by race conditions and timing guesses.</td>
+      <td>Addresses test <em>implementation</em> technique (during building). Retrospective analyzes the development <em>process</em> after completion. Different phase, different purpose entirely.</td>
+    </tr>
+    <tr>
+      <td><code>defense-in-depth</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Validates data at every layer it passes through, making bugs structurally impossible. Prevents single-point-of-validation bypasses.</td>
+      <td>Code architecture pattern (during building). Retrospective doesn't evaluate validation strategy — it traces which tools and skills contributed to the build.</td>
+    </tr>
+    <tr>
+      <td><code>root-cause-tracing</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Traces bugs backward through call stack to find original trigger. Adds instrumentation when needed to identify source of invalid data.</td>
+      <td>Debugging technique for <em>specific bugs</em> (during building). Retrospective traces <em>development history</em>, not bug call stacks. Both trace backward, but through completely different domains.</td>
+    </tr>
+    <tr>
+      <td><code>sharing-skills</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Guides contributing skills upstream via PR: branch, commit, push, create PR workflow.</td>
+      <td>Contribution process for skills. Retrospective is an analysis methodology. We actually <em>used</em> sharing-skills concepts while creating this PR.</td>
+    </tr>
+    <tr>
+      <td><code>testing-anti-patterns</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>Prevents testing mock behavior, production pollution with test-only methods, and mocking without understanding dependencies. Three iron laws.</td>
+      <td>Test quality enforcement (during building). Retrospective doesn't evaluate test quality — it checks whether tests were written before or after implementation (TDD compliance).</td>
+    </tr>
+    <tr>
+      <td><code>testing-skills-with-subagents</code></td>
+      <td><span class="badge badge-lfa">LFA Only</span></td>
+      <td><span class="badge badge-none">None</span></td>
+      <td>RED-GREEN-REFACTOR cycle for skill documentation: run baseline without skill, write skill, iterate to close loopholes.</td>
+      <td>Skill <em>creation</em> methodology. We used this skill's methodology during the RED/GREEN/REFACTOR eval of retrospective-provenance. No functional overlap.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2>Temporal Orientation Map (All 20 + New Skill)</h2>
+
+<div class="card">
+  <div class="card-title">Every existing skill — in both ecosystems — is forward-looking. This is the first backward-looking skill.</div>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Skills</th><th>Count</th><th>Question Answered</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--purple)"><strong>BEFORE building</strong></td>
+        <td>
+          <code>brainstorming</code> <span class="badge badge-both">Both</span>,
+          <code>writing-plans</code> <span class="badge badge-both">Both</span>,
+          <code>using-git-worktrees</code> <span class="badge badge-both">Both</span>
+        </td>
+        <td>3</td>
+        <td>"What should we build and how should we plan it?"</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent)"><strong>DURING building</strong></td>
+        <td>
+          <code>test-driven-development</code> <span class="badge badge-both">Both</span>,
+          <code>executing-plans</code> <span class="badge badge-both">Both</span>,
+          <code>subagent-driven-development</code> <span class="badge badge-both">Both</span>,
+          <code>dispatching-parallel-agents</code> <span class="badge badge-both">Both</span>,
+          <code>systematic-debugging</code> <span class="badge badge-both">Both</span>,
+          <code>condition-based-waiting</code> <span class="badge badge-lfa">LFA</span>,
+          <code>defense-in-depth</code> <span class="badge badge-lfa">LFA</span>,
+          <code>root-cause-tracing</code> <span class="badge badge-lfa">LFA</span>,
+          <code>testing-anti-patterns</code> <span class="badge badge-lfa">LFA</span>
+        </td>
+        <td>9</td>
+        <td>"How should we build it right now?"</td>
+      </tr>
+      <tr>
+        <td style="color:var(--yellow)"><strong>AT completion</strong></td>
+        <td>
+          <code>requesting-code-review</code> <span class="badge badge-both">Both</span>,
+          <code>receiving-code-review</code> <span class="badge badge-both">Both</span>,
+          <code>verification-before-completion</code> <span class="badge badge-both">Both</span>,
+          <code>finishing-a-development-branch</code> <span class="badge badge-both">Both</span>
+        </td>
+        <td>4</td>
+        <td>"Is it done correctly and ready to ship?"</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted)"><strong>META (skill lifecycle)</strong></td>
+        <td>
+          <code>using-superpowers</code> <span class="badge badge-both">Both</span>,
+          <code>writing-skills</code> <span class="badge badge-both">Both</span>,
+          <code>sharing-skills</code> <span class="badge badge-lfa">LFA</span>,
+          <code>testing-skills-with-subagents</code> <span class="badge badge-lfa">LFA</span>
+        </td>
+        <td>4</td>
+        <td>"How do we find, create, and test skills?"</td>
+      </tr>
+      <tr style="background: var(--green-dim);">
+        <td style="color:var(--green)"><strong>AFTER completion</strong></td>
+        <td>
+          <code>retrospective-provenance</code> <span class="badge badge-none">NEW</span>
+        </td>
+        <td>0 &rarr; 1</td>
+        <td>"How was it built, what helped, and what should we do differently?"</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ================================================================== -->
+<h2>Closest Comparisons (Deeper Analysis)</h2>
+
+<div class="card">
+  <div class="card-title">root-cause-tracing <span class="badge badge-lfa">LFA Only</span> vs retrospective-provenance — Both Trace Backward</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0.75rem;">These two skills both involve backward analysis, which makes them the closest conceptual pair. But they trace through completely different domains.</p>
+  <table>
+    <thead><tr><th>Dimension</th><th>root-cause-tracing</th><th>retrospective-provenance</th></tr></thead>
+    <tbody>
+      <tr><td>Traces through</td><td>Call stack / code execution path</td><td>Git history / commit timeline</td></tr>
+      <tr><td>Looking for</td><td>Source of invalid data or incorrect behavior</td><td>Source of tools, skills, and ecosystem contributions</td></tr>
+      <tr><td>Adds</td><td>Instrumentation (logging, assertions) to code</td><td>Classification (ecosystem tags, effectiveness scores) to history</td></tr>
+      <tr><td>Fixes</td><td>A specific bug at its origin</td><td>Nothing — produces a report with recommendations</td></tr>
+      <tr><td>When</td><td>During active debugging session</td><td>After project/phase completion</td></tr>
+      <tr><td style="color:var(--green)">Verdict</td><td colspan="2">Both trace backward, but through different domains (code vs history), for different purposes (fix bug vs analyze process). <strong>No functional overlap.</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">testing-skills-with-subagents <span class="badge badge-lfa">LFA Only</span> vs retrospective-provenance — Both Evaluate Skills</div>
+  <table>
+    <thead><tr><th>Dimension</th><th>testing-skills-with-subagents</th><th>retrospective-provenance</th></tr></thead>
+    <tbody>
+      <tr><td>Purpose</td><td>Verify a skill <em>works correctly</em> before deployment</td><td>Assess whether skills <em>were used</em> and <em>were effective</em> on a project</td></tr>
+      <tr><td>Scope</td><td>One skill being tested in isolation</td><td>All skills/tools/plugins across a project's history</td></tr>
+      <tr><td>Method</td><td>Dispatch subagents with pressure scenarios</td><td>Git forensics, artifact tracing, timeline reconstruction</td></tr>
+      <tr><td>Output</td><td>Pass/fail per scenario, rationalization catalog</td><td>Executive report with provenance map, scorecard, recommendations</td></tr>
+      <tr><td style="color:var(--green)">Verdict</td><td colspan="2">testing-skills-with-subagents is a <strong>quality gate</strong> for skill creation. retrospective-provenance is a <strong>post-mortem</strong> for skill usage. We used the former <em>to create</em> the latter. <strong>No functional overlap.</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">requesting-code-review <span class="badge badge-both">Both</span> vs retrospective-provenance</div>
+  <table>
+    <thead><tr><th>Dimension</th><th>requesting-code-review</th><th>retrospective-provenance</th></tr></thead>
+    <tbody>
+      <tr><td>Timing</td><td>Between tasks or before merge</td><td>After project/phase completion</td></tr>
+      <tr><td>Scope</td><td>Code diff between two SHAs</td><td>Entire project history and ecosystem</td></tr>
+      <tr><td>Analyzes</td><td>Code quality, correctness, bugs</td><td>Tools, skills, ecosystem provenance, process</td></tr>
+      <tr><td>Git usage</td><td>Reads diff between BASE..HEAD</td><td>Reads full history, authors, timestamps, trailers</td></tr>
+      <tr><td>Output</td><td>Issue list (Critical/Important/Minor)</td><td>HTML+PDF retrospective with timeline, scorecard</td></tr>
+      <tr><td style="color:var(--green)">Verdict</td><td colspan="2">Both use git. Different questions, different analysis, different output. <strong>Low overlap.</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">test-driven-development <span class="badge badge-both">Both</span> vs retrospective-provenance (TDD detection)</div>
+  <table>
+    <thead><tr><th>Dimension</th><th>test-driven-development</th><th>retrospective-provenance</th></tr></thead>
+    <tbody>
+      <tr><td>Role</td><td><strong>Enforcer</strong> — requires RED-GREEN-REFACTOR</td><td><strong>Detective</strong> — checks if TDD was followed after the fact</td></tr>
+      <tr><td>Method</td><td>Process discipline: write test first, watch fail</td><td>Forensic: compare <code>feat:</code> vs <code>test:</code> commit timestamps</td></tr>
+      <tr><td>When</td><td>During coding (proactive)</td><td>During retrospective (reactive)</td></tr>
+      <tr><td style="color:var(--green)">Verdict</td><td colspan="2">Retrospective <em>detects</em> TDD absence. TDD <em>prevents</em> it. Complementary. <strong>Low overlap.</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ================================================================== -->
+<h2>LFA Additions: What They Add to the Ecosystem</h2>
+
+<div class="card">
+  <div class="card-title">The 6 LFA-only skills deepen the DURING phase — none address AFTER</div>
+  <p style="font-size:0.85rem; color:var(--muted);">LFA extended obra's 14 skills by adding depth to active development: better debugging (<code>root-cause-tracing</code>), better validation (<code>defense-in-depth</code>), better tests (<code>condition-based-waiting</code>, <code>testing-anti-patterns</code>), and better skill management (<code>sharing-skills</code>, <code>testing-skills-with-subagents</code>). This makes the DURING and META phases more robust, but the AFTER phase remains empty.</p>
+  <table>
+    <thead><tr><th>LFA Skill</th><th>Phase</th><th>What It Adds</th></tr></thead>
+    <tbody>
+      <tr><td><code>condition-based-waiting</code></td><td>DURING</td><td>Eliminates flaky tests from timing guesses</td></tr>
+      <tr><td><code>defense-in-depth</code></td><td>DURING</td><td>Multi-layer validation makes bugs structurally impossible</td></tr>
+      <tr><td><code>root-cause-tracing</code></td><td>DURING</td><td>Backward tracing through call stacks to find bug origins</td></tr>
+      <tr><td><code>testing-anti-patterns</code></td><td>DURING</td><td>Prevents mock-testing, production pollution, blind mocking</td></tr>
+      <tr><td><code>sharing-skills</code></td><td>META</td><td>PR workflow for contributing skills upstream</td></tr>
+      <tr><td><code>testing-skills-with-subagents</code></td><td>META</td><td>RED-GREEN-REFACTOR for skill documentation</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ================================================================== -->
+<h2>Conclusion</h2>
+
+<div class="verdict-box unique">
+  <div class="verdict-title">No Duplication in Either Ecosystem. Fills a Genuine Gap.</div>
+  <p>Across <strong>all 20 skills</strong> in the LFA marketplace (which is a superset of the 14 in obra/superpowers), there is zero duplication with <code>retrospective-provenance</code>.</p>
+  <p style="margin-top:0.5rem">The LFA additions made the DURING phase stronger (4 new skills) and the META phase stronger (2 new skills). But the AFTER-COMPLETION phase has <strong>zero coverage in both ecosystems</strong>. <code>retrospective-provenance</code> is the first skill to address: "Now that we've built something, how do we learn from the process?"</p>
+  <p style="margin-top:0.5rem">The 3 skills with LOW overlap (<code>requesting-code-review</code>, <code>verification-before-completion</code>, <code>test-driven-development</code>) are complementary — retrospective-provenance <em>detects</em> where those skills were or weren't used, creating a feedback loop that makes the entire ecosystem more effective.</p>
+</div>
+
+<p class="meta">
+  Analysis compared <code>retrospective-provenance</code> against all 14 skills in <code>obra/superpowers</code> v5.0.6 AND all 20 skills in <code>lamadeo/lfa-cc-marketplace</code> superpowers v3.6.3.<br>
+  Every SKILL.md was read in full (name, description, overview, when-to-use, core workflow).<br>
+  Date: April 1, 2026
+</p>
+
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Eval: retrospective-provenance — Before / After</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --border: #2a2a2a;
+    --text: #e5e5e5;
+    --muted: #888;
+    --red: #ef4444;
+    --red-dim: #450a0a;
+    --green: #22c55e;
+    --green-dim: #14532d;
+    --yellow: #eab308;
+    --yellow-dim: #422006;
+    --accent: #3b82f6;
+    --mono: 'SF Mono', 'Cascadia Code', monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.55; padding: 2rem; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 2rem; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+  .hero-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+  .hero-card.baseline { border-top: 3px solid var(--red); }
+  .hero-card.with-skill { border-top: 3px solid var(--green); }
+  .hero-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 0.5rem; }
+  .hero-label.red { color: var(--red); }
+  .hero-label.green { color: var(--green); }
+  .hero-score { font-family: var(--mono); font-size: 2.5rem; font-weight: 700; }
+  .hero-score.red { color: var(--red); }
+  .hero-score.green { color: var(--green); }
+  .hero-detail { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 1rem 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .col { padding: 1rem 1.25rem; }
+  .col.left { background: rgba(239, 68, 68, 0.03); border-right: 1px solid var(--border); }
+  .col.right { background: rgba(34, 197, 94, 0.03); }
+  .col-header { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  .col-header.red { color: var(--red); }
+  .col-header.green { color: var(--green); }
+
+  .finding { margin-bottom: 0.75rem; font-size: 0.85rem; }
+  .finding-label { font-weight: 600; margin-bottom: 0.15rem; }
+  .finding-text { color: var(--muted); }
+  .finding-cite { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); margin-top: 0.15rem; }
+
+  .badge { display: inline-block; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.15rem 0.4rem; border-radius: 3px; font-family: var(--mono); vertical-align: middle; }
+  .badge-fail { background: var(--red-dim); color: var(--red); }
+  .badge-pass { background: var(--green-dim); color: var(--green); }
+  .badge-partial { background: var(--yellow-dim); color: var(--yellow); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0; }
+  th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td:first-child { font-weight: 600; }
+
+  .verdict-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 6px; margin: 0.5rem 0; font-size: 0.85rem; }
+  .verdict-row.pass { background: var(--green-dim); border: 1px solid rgba(34, 197, 94, 0.3); }
+  .verdict-row.fail { background: var(--red-dim); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .verdict-row.partial { background: var(--yellow-dim); border: 1px solid rgba(234, 179, 8, 0.3); }
+  .verdict-icon { font-size: 1.1rem; }
+
+  .meta { font-size: 0.75rem; color: var(--muted); margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+  @media (max-width: 900px) { .hero, .comparison { grid-template-columns: 1fr; } .col.left { border-right: none; border-bottom: 1px solid var(--border); } }
+  @media print { body { background: #fff; color: #111; } .hero-card, .col { background: #f9f9f9 !important; } th { background: #eee; } }
+</style>
+</head>
+<body>
+
+<h1>Skill Eval: retrospective-provenance</h1>
+<p class="subtitle">Side-by-side comparison of subagent output WITHOUT skill (baseline) vs WITH skill loaded<br>
+Target: RFIP Bid Tool (<code>/Users/jesskeeney/playground/rfip-bid-tool</code>) &nbsp;|&nbsp; Model: Claude Opus 4.6 &nbsp;|&nbsp; Harness: Claude Code</p>
+
+<!-- ================================================================== -->
+<h2>Overall Score</h2>
+
+<div class="hero">
+  <div class="hero-card baseline">
+    <div class="hero-label red">RED — Baseline (No Skill)</div>
+    <div class="hero-score red">1 / 10</div>
+    <div class="hero-detail">Only dependency inventory was partially correct. All analysis dimensions missed or wrong.</div>
+  </div>
+  <div class="hero-card with-skill">
+    <div class="hero-label green">GREEN — With Skill</div>
+    <div class="hero-score green">9 / 10</div>
+    <div class="hero-detail">All 5 layers completed. Every finding cited with commit SHA, file path, or date. One partial (output format).</div>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2>Dimension-by-Dimension Comparison</h2>
+
+<!-- Dimension 1 -->
+<h3>1. Superpowers Plugin Artifacts</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Never looked at docs/superpowers/</div>
+      <div class="finding-text">Listed npm dependencies exhaustively but completely missed the design spec and implementation plan that produced the project's most accurate feature. The entire Superpowers workflow (brainstorming, writing-plans, executing-plans) was invisible to the agent.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Found both Superpowers artifacts with commit SHAs</div>
+      <div class="finding-text">Identified <code>docs/superpowers/specs/2026-03-10-accuracy-calibration-design.md</code> and <code>docs/superpowers/plans/2026-03-10-accuracy-calibration.md</code>. Traced the plan header's reference to <code>superpowers:subagent-driven-development</code>. Correlated 8 implementation commits to plan tasks.</div>
+      <div class="finding-cite">Commits cited: 3455556a, 2c732fba, 5b4b3b03, fddb4646, 2af90d18</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 2 -->
+<h3>2. PRD Plugin Detection</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Never identified docs/prd/ as plugin output</div>
+      <div class="finding-text">The baseline agent did not explore the docs/ directory at all. The PRD plugin generated 28 features, 101 user stories, and a delivery roadmap that directly informed the $120K Phase 2 proposal — all invisible.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Found PRD and noted it was retroactive</div>
+      <div class="finding-text">Identified all 6 PRD documents. Critically, noted the PRD was committed March 26 (commit <code>870f8cee</code>) — 24 days after Phase 1 code was complete. Correctly classified this as "documented what existed rather than driving what was built."</div>
+      <div class="finding-cite">Commit cited: 870f8cee (Mar 26)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 3 -->
+<h3>3. Timeline & Commit Ordering</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">No timeline analysis at all</div>
+      <div class="finding-text">Listed tools and features but never analyzed when they were used, commit velocity, or the chronological relationship between planning and implementation. Could not answer "did planning happen before or after building?"</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Full timeline with phase analysis and commit velocity</div>
+      <div class="finding-text">Reconstructed 4 development phases: Foundation Sprint (Mar 2-4, 22 commits), Calibration Sprint (Mar 10, 10 commits), Phase 2 Prep (Mar 25-28), and Polish (Mar 29-31). Identified March 10 as the only design-first phase. Noted Day 1 had 17 commits in ~6 hours with zero tests.</div>
+      <div class="finding-cite">Timeline spans: 8dd1d5bd (Mar 2 10:37) through c96c59cc (Mar 31 15:31)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 4 -->
+<h3>4. Commit Authorship & AI Attribution</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">"Agent usage is inferred, not proven"</div>
+      <div class="finding-text">Admitted it couldn't determine authorship. Never ran <code>git log --format="%ae"</code> or checked for Co-Authored-By trailers. Guessed based on "commit message conventions" and "rapid feature velocity."</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Found 2 authors, 41 Co-Authored-By trailers across 3 models</div>
+      <div class="finding-text">Identified jessicakeeney@gmail.com (40 commits) and 404.pilo.code@gmail.com (28 commits). Found 41 Co-Authored-By trailers: 32 from Claude Opus 4.6, 5 from Claude Opus 4.6 (1M context), 4 from Claude Sonnet 4.6. Reported factually without speculation.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 5 -->
+<h3>5. Ecosystem Provenance Classification</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">All npm packages lumped as one category</div>
+      <div class="finding-text">Used categories like "npm (Vercel)", "npm (Meta)", "npm (community)" — technically correct but lost the ecosystem provenance signal. @vercel/blob and zod were treated with equal weight. No distinction between platform vendor, AI provider, agent skills, or OSS.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">6-category classification matching skill taxonomy</div>
+      <div class="finding-text">Classified into: Platform vendor (Vercel), AI provider direct (Anthropic SDK), Agent skills (Superpowers/LFA), Agent plugins (community), OSS ecosystem. Each category has different vendor risk and lock-in implications.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 6 -->
+<h3>6. Evidence-Backed Effectiveness Scoring</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Subjective ratings without citations</div>
+      <div class="finding-text">Used "HIGH IMPACT", "LOW-MEDIUM IMPACT" labels with no defined criteria. Ratings were based on tool popularity, not project-specific outcomes. No commit SHAs, no test results, no measurable targets cited.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Every score cites specific evidence</div>
+      <div class="finding-text">superpowers:brainstorming rated HIGH because the design spec defined exact interface changes that were implemented in commits <code>5b4b3b03</code> and <code>fddb4646</code>, and the Highlark validation test (<code>2af90d18</code>) confirmed &pm;5% accuracy. PRD rated MEDIUM because it was retroactive (Mar 26 vs Mar 2 code).</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 7 -->
+<h3>7. Gap Analysis Relevance</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Suggested irrelevant tools</div>
+      <div class="finding-text">Recommended SheetJS (for parsing a reference spreadsheet), Sentry, rate limiting, Pinecone, and Playwright MCP. None of these match the project's actual constraints (Phase 1 prototype, single-client, 30-day timeline). Didn't check what Superpowers skills were available.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Gaps matched to evidence and available skills</div>
+      <div class="finding-text">Identified 5 gaps, each backed by specific evidence: (1) No TDD — every test follows its feature commit. (2) No CLAUDE.md. (3) No verification before refine branch merge — build fix needed 18min after PR merge (<code>bc8e4c7c</code>). (4) Brainstorming used for only 1 of ~15 features. (5) No CI/CD.</div>
+      <div class="finding-cite">Evidence: commit timestamp ordering, bc8e4c7c (build fix 18min post-merge)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 8 -->
+<h3>8. Test-Writing Order Detection</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Never checked commit timestamps for TDD compliance</div>
+      <div class="finding-text">Noted "good test coverage" without examining whether tests were written before or after implementation. Could not detect the fundamental workflow gap.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Explicitly analyzed feat: vs test: timestamps</div>
+      <div class="finding-text">Found that on March 10, the <code>refactor</code> commit (12:20) precedes its test (12:22). On March 2, 14 feature commits had zero corresponding tests. E2e tests written March 26-30, 3+ weeks after features. Correctly identified this as a TDD gap.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 9 -->
+<h3>9. Available Skill Ecosystem Awareness</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Recommended tools outside the project's ecosystem</div>
+      <div class="finding-text">Suggested context7 plugin, Playwright MCP, Pinecone — tools that exist in the environment but are unrelated to the project's needs. Never listed what Superpowers skills were available or which ones weren't used.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-pass">PASS</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Matched gaps to actual Superpowers skills</div>
+      <div class="finding-text">Recommended <code>superpowers:test-driven-development</code>, <code>superpowers:verification-before-completion</code>, and <code>superpowers:brainstorming</code> — all real, available skills. Each recommendation tied to specific evidence of where the skill would have prevented a documented issue.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension 10 -->
+<h3>10. Output Format & Deliverability</h3>
+<div class="comparison">
+  <div class="col left">
+    <div class="col-header red"><span class="badge badge-fail">FAIL</span> &nbsp;Baseline</div>
+    <div class="finding">
+      <div class="finding-label">Plain text with proposed sections</div>
+      <div class="finding-text">Returned a text blob with markdown tables. Proposed an output format but didn't produce it. Not shareable with executives or cross-functional teams without reformatting.</div>
+    </div>
+  </div>
+  <div class="col right">
+    <div class="col-header green"><span class="badge badge-partial">PARTIAL</span> &nbsp;With Skill</div>
+    <div class="finding">
+      <div class="finding-label">Skill specifies HTML+PDF but test was research-only</div>
+      <div class="finding-text">The skill explicitly requires "self-contained HTML document" with hero stats, provenance table, timeline, scorecard, and PDF. The subagent was given a research-only prompt so output format wasn't tested. The guidance is present in the skill; delivery execution was not tested.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2>Scorecard Summary</h2>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Dimension</th><th>Baseline</th><th>With Skill</th><th>Delta</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Superpowers artifact detection</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Missed entirely &rarr; found with 5 commit citations</td></tr>
+    <tr><td>2</td><td>PRD plugin detection</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Missed entirely &rarr; found + noted retroactive timing</td></tr>
+    <tr><td>3</td><td>Timeline reconstruction</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>No timeline &rarr; 4-phase analysis with velocity</td></tr>
+    <tr><td>4</td><td>Commit authorship analysis</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>"Inferred" &rarr; 2 authors, 41 trailers, 3 models</td></tr>
+    <tr><td>5</td><td>Ecosystem classification</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Flat npm list &rarr; 6-category taxonomy</td></tr>
+    <tr><td>6</td><td>Evidence-backed scoring</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Subjective &rarr; every score cites commits/files</td></tr>
+    <tr><td>7</td><td>Relevant gap analysis</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Irrelevant suggestions &rarr; evidence-matched gaps</td></tr>
+    <tr><td>8</td><td>Test-writing order detection</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Not checked &rarr; timestamp analysis proves no TDD</td></tr>
+    <tr><td>9</td><td>Skill ecosystem awareness</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-pass">PASS</span></td><td>Wrong tools &rarr; actual available skills recommended</td></tr>
+    <tr><td>10</td><td>Output format deliverability</td><td><span class="badge badge-fail">FAIL</span></td><td><span class="badge badge-partial">PARTIAL</span></td><td>Text blob &rarr; skill specifies HTML+PDF (not tested in output mode)</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2>Test Methodology</h2>
+
+<table>
+  <thead><tr><th>Parameter</th><th>Baseline</th><th>With Skill</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Prompt</strong></td><td>Generic: "analyze codebase for retrospective, identify skills/tools, classify by marketplace, evaluate effectiveness"</td><td>Same core request + full SKILL.md content injected as guidance</td></tr>
+    <tr><td><strong>Agent type</strong></td><td>general-purpose subagent</td><td>general-purpose subagent</td></tr>
+    <tr><td><strong>Model</strong></td><td>Claude Opus 4.6</td><td>Claude Opus 4.6</td></tr>
+    <tr><td><strong>Mode</strong></td><td>Research only (no file writes)</td><td>Research only (no file writes)</td></tr>
+    <tr><td><strong>Tool calls</strong></td><td>41</td><td>22</td></tr>
+    <tr><td><strong>Duration</strong></td><td>~129s</td><td>~135s</td></tr>
+    <tr><td><strong>Tokens</strong></td><td>83,007</td><td>34,941</td></tr>
+  </tbody>
+</table>
+
+<div class="verdict-row pass">
+  <span class="verdict-icon">&#9679;</span>
+  <div><strong>Notable:</strong> The with-skill agent used <strong>half the tool calls</strong> (22 vs 41) and <strong>58% fewer tokens</strong> (35K vs 83K) while producing dramatically better results. The skill's required commands gave the agent a focused investigation plan instead of exploratory browsing.</div>
+</div>
+
+<p class="meta">
+  Generated as part of the <code>superpowers:writing-skills</code> TDD workflow for the <code>retrospective-provenance</code> skill.<br>
+  RED phase: baseline subagent dispatched without skill &rarr; 1/10 score.<br>
+  GREEN phase: same prompt with skill injected &rarr; 9/10 score.<br>
+  REFACTOR: added multi-agent attribution guidance based on GREEN phase gap.<br>
+  Date: April 1, 2026
+</p>
+
+</body>
+</html>

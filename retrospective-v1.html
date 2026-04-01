@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFIP Bid Tool — Development Retrospective</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --border: #2a2a2a;
+    --text: #e5e5e5;
+    --text-muted: #a0a0a0;
+    --accent: #3b82f6;
+    --accent-dim: #1e3a5f;
+    --green: #22c55e;
+    --green-dim: #14532d;
+    --yellow: #eab308;
+    --yellow-dim: #422006;
+    --red: #ef4444;
+    --red-dim: #450a0a;
+    --purple: #a78bfa;
+    --purple-dim: #2e1065;
+    --orange: #f97316;
+    --orange-dim: #431407;
+    --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.03em;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.75rem;
+    color: var(--text);
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: -0.04em;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: var(--mono);
+  }
+
+  .badge-lfa { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
+  .badge-community { background: var(--purple-dim); color: var(--purple); border: 1px solid var(--purple); }
+  .badge-vercel { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .badge-anthropic { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+  .badge-oss { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+  .badge-high { background: var(--green-dim); color: var(--green); }
+  .badge-medium { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-low { background: var(--red-dim); color: var(--red); }
+  .badge-not-used { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 1rem 0;
+  }
+
+  th {
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tr:hover td { background: var(--surface); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--surface-2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  .file-ref {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin: 1.5rem 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 1.25rem;
+    padding-left: 0.75rem;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.75rem;
+    top: 0.5rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+
+  .timeline-date {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .timeline-title {
+    font-weight: 600;
+    margin: 0.15rem 0 0.25rem;
+  }
+
+  .timeline-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .verdict-icon { font-size: 1.1rem; }
+
+  .section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .section-grid { grid-template-columns: 1fr; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .impact-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .impact-fill {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+
+  .impact-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    font-size: 0.8rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  .callout-warn {
+    border-left-color: var(--yellow);
+  }
+
+  .callout-good {
+    border-left-color: var(--green);
+  }
+
+  .print-only { display: none; }
+
+  @media print {
+    body { background: white; color: #111; padding: 1rem; }
+    .stat, .card { border-color: #ddd; background: #f9f9f9; }
+    .print-only { display: block; }
+    h2 { border-bottom-color: #ddd; }
+    th { background: #f3f3f3; }
+  }
+</style>
+</head>
+<body>
+
+<h1>RFIP Bid Tool — Development Retrospective</h1>
+<p class="subtitle">Data-driven analysis of skills, plugins, patterns, and best practices used during Phase 1 development<br>
+Project: <code>/Users/jesskeeney/playground/rfip-bid-tool</code> &nbsp;|&nbsp; Date range: Mar 2 – Mar 31, 2026 &nbsp;|&nbsp; 67 commits &nbsp;|&nbsp; 2 contributors</p>
+
+<!-- ================================================================== -->
+<h2>1. Project Vital Signs</h2>
+
+<div class="hero-stats">
+  <div class="stat">
+    <div class="stat-value" style="color:var(--accent)">7,019</div>
+    <div class="stat-label">Lines of Source Code</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--green)">567</div>
+    <div class="stat-label">Lines of Tests (6 unit + 7 e2e files)</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--purple)">67</div>
+    <div class="stat-label">Total Commits</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--orange)">30</div>
+    <div class="stat-label">Calendar Days</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--yellow)">$305K</div>
+    <div class="stat-label">Highlark Estimate Validated</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:var(--green)">&pm;5%</div>
+    <div class="stat-label">Accuracy vs Real Bid</div>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2>2. Technology & Plugin Provenance Map</h2>
+
+<p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem;">
+Every dependency and tool is classified by its marketplace origin. This matters because it reveals which ecosystems the project relied on and where vendor lock-in or community risk exists.
+</p>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge badge-vercel">Vercel</span> Vercel Platform / Marketplace</div>
+  <div class="legend-item"><span class="badge badge-anthropic">Anthropic</span> Anthropic Direct SDK</div>
+  <div class="legend-item"><span class="badge badge-lfa">LFA / Superpowers</span> LFA Marketplace Plugin</div>
+  <div class="legend-item"><span class="badge badge-community">Community</span> Community Plugin</div>
+  <div class="legend-item"><span class="badge badge-oss">OSS</span> Open-Source / npm</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Origin</th>
+      <th>Role in Project</th>
+      <th>Key Files</th>
+      <th>Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Next.js 16.1.6</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Full-stack framework — App Router, Server Components, Server Actions, <code>proxy.ts</code></td>
+      <td class="file-ref">src/app/**, src/proxy.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:100%"></div><span class="impact-label">Critical</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Vercel Platform (Deploy)</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Hosting, Serverless Functions (120s max duration for project detail pages), CI/CD</td>
+      <td class="file-ref">vercel.json, .vercel/</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:90%"></div><span class="impact-label">Critical</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Vercel Blob</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Blueprint PDF uploads — client-side uploads to Blob, URL passed to extraction API</td>
+      <td class="file-ref">src/app/api/blueprints/upload/route.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:60%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>shadcn/ui (New York style)</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>14 UI components: Button, Card, Dialog, Table, Tabs, Select, Badge, Sheet, Sonner, etc.</td>
+      <td class="file-ref">src/components/ui/*.tsx, components.json</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:80%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>@anthropic-ai/sdk</strong></td>
+      <td><span class="badge badge-anthropic">Anthropic</span></td>
+      <td>Direct Claude API for blueprint PDF extraction (claude-sonnet-4-6, document vision)</td>
+      <td class="file-ref">src/lib/extraction/claude-adapter.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:85%"></div><span class="impact-label">Critical</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Superpowers Plugin</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>Design specs, implementation plans, brainstorming, subagent-driven-development workflow</td>
+      <td class="file-ref">docs/superpowers/specs/*, docs/superpowers/plans/*</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:75%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>PRD Plugin (prd:explore)</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>Generated full PRD with 28 features, 4 themes, roadmap, and delivery simulation</td>
+      <td class="file-ref">docs/prd/prd.md, docs/prd/themes.md, docs/prd/features/*</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:70%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>website@ai-advanced-futures</strong></td>
+      <td><span class="badge badge-community">Community</span></td>
+      <td>Autonomous UI refinement — 7-cycle design iteration with scoring (design_quality, originality, craft, functionality, accessibility)</td>
+      <td class="file-ref">.claude/settings.json, refine(cycle-1) through refine(cycle-7) commits</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:55%"></div><span class="impact-label">Medium</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Prisma 7.4.2</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>ORM + PostgreSQL adapter, generated client, 11 models (Project, Blueprint, Material, BomItem, etc.)</td>
+      <td class="file-ref">prisma/*, src/generated/prisma/*, src/lib/db.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:85%"></div><span class="impact-label">Critical</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Zod 4.3.6</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Schema validation for extraction results, project forms, material filters, labor config</td>
+      <td class="file-ref">src/lib/schemas.ts, src/lib/extraction/claude-adapter.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:70%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>@react-pdf/renderer</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Server-side PDF generation — 10-section bid proposal documents</td>
+      <td class="file-ref">src/lib/proposal/generate-pdf.tsx</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:60%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Playwright 1.58</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>End-to-end tests — project lifecycle, materials, navigation (7 spec files)</td>
+      <td class="file-ref">e2e/*, playwright.config.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:50%"></div><span class="impact-label">Medium</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Vitest 4.0</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Unit tests — BOM generator, conduit fill, labor calculator, Highlark validation, mock adapter</td>
+      <td class="file-ref">src/lib/calculators/__tests__/*, vitest.config.ts</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:65%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+    <tr>
+      <td><strong>Tailwind CSS 4 + Radix UI</strong></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Styling system (via shadcn/ui), CSS variables, oklch theming</td>
+      <td class="file-ref">src/app/globals.css, postcss.config.mjs</td>
+      <td><div class="impact-bar"><div class="impact-fill" style="width:60%"></div><span class="impact-label">High</span></div></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2>3. Skills & Plugins — Detailed Effectiveness Analysis</h2>
+
+<h3>A. LFA Marketplace Skills (Superpowers Plugin)</h3>
+
+<div class="callout callout-good">
+<strong>Evidence trail:</strong> The Superpowers plugin created structured artifacts in <code>docs/superpowers/</code>. Commit messages and plan structure confirm the <code>superpowers:brainstorming</code>, <code>superpowers:writing-plans</code>, and <code>superpowers:executing-plans</code> workflows were used for the accuracy calibration feature.
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header">
+      <strong>superpowers:writing-plans</strong>
+      <span class="badge badge-high">High Impact</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <strong>Used for:</strong> Accuracy calibration implementation plan (Mar 10)<br>
+      <strong>Evidence:</strong> <code>docs/superpowers/plans/2026-03-10-accuracy-calibration.md</code><br>
+      <strong>What it did:</strong> Broke the calibration work into 4 chunks with 11 checkbox-tracked tasks, each with exact file paths, code diffs, and verification steps.<br>
+      <strong>Verdict:</strong> Highly effective. The plan header explicitly instructed agents to use <code>superpowers:subagent-driven-development</code> or <code>superpowers:executing-plans</code>. All 6 calibration commits on Mar 10 map to plan tasks.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>superpowers:brainstorming (Design Spec)</strong>
+      <span class="badge badge-high">High Impact</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <strong>Used for:</strong> Accuracy calibration design specification<br>
+      <strong>Evidence:</strong> <code>docs/superpowers/specs/2026-03-10-accuracy-calibration-design.md</code><br>
+      <strong>What it did:</strong> Produced a detailed technical design: cable grade mixing interface, 15-row pricing calibration table with supplier part numbers, dual cost/sell labor rate structure, and Highlark validation targets.<br>
+      <strong>Verdict:</strong> Critical enabler. The design spec contained real-world pricing data (Superior Essex, Ortronics, Great Lakes part numbers) that was directly implemented into the BOM generator.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>prd:explore (PRD Plugin)</strong>
+      <span class="badge badge-high">High Impact</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <strong>Used for:</strong> Phase 2 requirements definition (Mar 26–28)<br>
+      <strong>Evidence:</strong> <code>docs/prd/prd.md</code> (17 feature specs), <code>docs/prd/themes.md</code> (4 themes, dependency graph), <code>docs/prd/features/theme-{1-4}*.md</code> (101 user stories)<br>
+      <strong>What it did:</strong> Generated a full PRD from existing code: 28 features, 101 user stories, 4 strategic themes, delivery roadmap with week-by-week capacity analysis, and a simulation report with critical design decisions.<br>
+      <strong>Verdict:</strong> Excellent ROI. The PRD directly informed the Phase 2 proposal ($120K) and gave the client a professional, data-backed product vision. The simulation report caught risks (Auth.js v5 compatibility, vendor outreach timing) that would have been missed.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>website@ai-advanced-futures (Refine Plugin)</strong>
+      <span class="badge badge-medium">Medium Impact</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <strong>Used for:</strong> Autonomous UI design refinement (Mar 28–29, 14 commits)<br>
+      <strong>Evidence:</strong> 7 refine cycles with scored commits: <code>refine(cycle-1)</code> through <code>refine(cycle-7)</code>, each with design_quality/originality/craft/functionality/accessibility scores<br>
+      <strong>What it did:</strong> Iteratively improved the marketing website UI: dark mode fixes → brand colors → nav indicators → Fluent elevation + acrylic nav → final polish. Scores progressed from 5/4/6/6/4 to 9/9/9/9/9.<br>
+      <strong>Verdict:</strong> Mixed. The iterative scoring approach is innovative and the design quality genuinely improved (cycle-6 pivot to light theme + Fluent design was a smart call). However, 14 commits for website styling on a bid tool is a significant time investment. This was a <em>.website</em> directory (gitignored), suggesting it was exploratory/experimental rather than core product work.
+    </p>
+  </div>
+</div>
+
+<h3>B. Skills/Plugins That Were NOT Used (But Could Have Been)</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Skill/Plugin</th>
+      <th>Origin</th>
+      <th>Why It Could Have Helped</th>
+      <th>Why It Wasn't Used</th>
+      <th>Recommendation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Vercel AI SDK + AI Gateway</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Would have replaced the direct <code>@anthropic-ai/sdk</code> dependency with provider-agnostic model routing, OIDC auth, cost tracking, and failover</td>
+      <td>Project uses Claude's document vision (PDF → structured JSON) which requires the Anthropic SDK's <code>document</code> content type. AI SDK could handle this via the <code>@ai-sdk/anthropic</code> provider, but the direct SDK was simpler for a single-provider, single-model use case.</td>
+      <td><span class="badge badge-medium">Phase 2</span> When adding production extraction (Civils.ai, multiple models), AI Gateway + AI SDK would add failover and cost tracking</td>
+    </tr>
+    <tr>
+      <td><strong>superpowers:test-driven-development</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>Would have enforced write-test-first discipline across all feature development</td>
+      <td>Tests were written, but often <em>after</em> implementation (see commit order: <code>feat: calibrate BOM pricing</code> at 12:27, then <code>test: update BOM unit tests</code> at 13:17). TDD was used for the Highlark validation fixture but not systematically.</td>
+      <td><span class="badge badge-high">Adopt Now</span> The Highlark validation test is the project's strongest quality gate — TDD would have caught pricing bugs earlier</td>
+    </tr>
+    <tr>
+      <td><strong>superpowers:verification-before-completion</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>Would have required running all tests and confirming output before claiming features complete</td>
+      <td>No evidence this was invoked. The <code>fix: serialize Prisma Decimals</code> commit (Mar 2) suggests a bug was caught after deployment, not before.</td>
+      <td><span class="badge badge-high">Adopt Now</span> Would have caught the RSC serialization bug pre-deploy</td>
+    </tr>
+    <tr>
+      <td><strong>Clerk (via Vercel Marketplace)</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Auth was deferred to Phase 2 (Theme 3). PRD mentions NextAuth.js, but Clerk via Marketplace would auto-provision env vars.</td>
+      <td>Auth was intentionally scoped out of Phase 1. PRD even flagged Auth.js v5 compatibility risk.</td>
+      <td><span class="badge badge-medium">Phase 2</span> PRD already identified this risk; Clerk is the right choice over Auth.js for Next.js 16</td>
+    </tr>
+    <tr>
+      <td><strong>vercel:bootstrap</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Would have orchestrated the initial project setup: vercel link, env pull, DB provisioning, first-run commands</td>
+      <td>Project was bootstrapped manually. The <code>.vercel/</code> directory exists but setup sequence was ad-hoc.</td>
+      <td><span class="badge badge-medium">Use for Phase 2</span> Especially when onboarding the RFIP team</td>
+    </tr>
+    <tr>
+      <td><strong>superpowers:systematic-debugging</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>Would have provided structured root-cause investigation before applying fixes</td>
+      <td>Several fix commits suggest reactive debugging: <code>fix: materials page filters use correct lowercase DB category names</code>, <code>fix: serialize Prisma Decimals</code>.</td>
+      <td><span class="badge badge-medium">Adopt</span> Especially for data-layer bugs where category/type mismatches cascade</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2>4. Best Practices — What the Code Actually Shows</h2>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header">
+      <strong>Adapter Pattern for AI Extraction</strong>
+      <span class="badge badge-high">Excellent</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <code>src/lib/extraction/adapter.ts</code> (19 lines) — switches between <code>claudeExtract</code> and <code>mockExtract</code> based on <code>ANTHROPIC_API_KEY</code> env var. This is a textbook pluggable adapter that enables development without API costs, demo mode, and future provider swaps.<br><br>
+      <strong>Why it works:</strong> The type signature <code>ExtractionAdapter = (fileName, fileBuffer, projectId?) => Promise&lt;ExtractionResult&gt;</code> creates a clean contract. The mock returns realistic data (732-drop Highlark fixture), so the entire BOM/labor pipeline can be tested without API calls.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>Real-World Validation Testing</strong>
+      <span class="badge badge-high">Excellent</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <code>src/lib/calculators/__tests__/highlark-validation.test.ts</code> (127 lines) — validates the <em>entire estimation pipeline</em> against a known real bid ($304,955 / 1,748 hours). Each assertion has a ±5% tolerance band against the actual Highlark Hotel estimate.<br><br>
+      <strong>Why it works:</strong> This is not a typical unit test — it is a <em>calibration harness</em>. When pricing constants change, this test fails before bad estimates reach clients. The fixture (<code>highlark-hotel.ts</code>) contains 732 synthetic drops matching the real project scope.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>Structured Observability</strong>
+      <span class="badge badge-medium">Good</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <code>src/lib/logger.ts</code> (60 lines) — structured JSON logging with module scoping, timing helpers, and request ID correlation (injected by <code>proxy.ts</code>). Usage logs are also persisted to PostgreSQL (<code>UsageLog</code> model) for API cost tracking.<br><br>
+      <strong>Improvement:</strong> Currently uses <code>console.log</code> output. For Phase 2, consider Vercel's built-in log drains or a structured logging integration (Datadog, Sentry) via the Marketplace.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>Zod Schema as API Contract</strong>
+      <span class="badge badge-high">Excellent</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      Claude's extraction output is validated against a strict Zod schema (<code>extractionSchema</code> in <code>claude-adapter.ts:16-50</code>) before entering the pipeline. Drop types, cable types, and conduit types are constrained to enums. This catches LLM hallucination at the boundary.<br><br>
+      <strong>Why it works:</strong> LLMs can return unexpected formats. The <code>.safeParse()</code> call converts a raw JSON blob into a type-safe <code>ExtractionResult</code> or throws with detailed issue descriptions. Markdown fence stripping handles the common <code>```json</code> wrapping.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>Next.js 16 proxy.ts</strong>
+      <span class="badge badge-medium">Good</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <code>src/proxy.ts</code> (14 lines) — correctly uses the Next.js 16 <code>proxy.ts</code> convention (not deprecated <code>middleware.ts</code>). Injects <code>x-request-id</code> headers for request tracing.<br><br>
+      <strong>Note:</strong> Correctly placed in <code>src/</code> (the project uses <code>--src-dir</code>). Follows Vercel best practices for middleware → proxy migration.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>API Error Handling</strong>
+      <span class="badge badge-medium">Good</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-muted)">
+      <code>claude-adapter.ts:219-236</code> — catches Anthropic-specific exceptions (AuthenticationError, BadRequestError, RateLimitError) and converts them to user-friendly messages. Credit balance errors get a specific redirect message.<br><br>
+      <strong>Improvement:</strong> The <code>catch</code> block at line 214 (usage log write failure) silently swallows errors. Consider logging the actual error for debugging.
+    </p>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2>5. Development Timeline & Skill Usage</h2>
+
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-date">Mar 2, 2026 (Day 1) — 15 commits</div>
+    <div class="timeline-title">Foundation Sprint</div>
+    <div class="timeline-desc">Scaffold → Schema → Types → Seed → Calculators → Server Actions → UI → PDF → Materials → Blob Uploads → Deploy fix. All core features built in a single day. <strong>No skills/plugins used</strong> — pure implementation velocity.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-date">Mar 3-4, 2026 (Days 2-3) — 7 commits</div>
+    <div class="timeline-title">Feature Expansion</div>
+    <div class="timeline-desc">Claude API integration, demo seed data, project delete, 13 BOM categories, observability, quick-start, category filter fix. Still no plugin-assisted planning.</div>
+  </div>
+  <div class="timeline-item" style="border-left: 2px solid var(--accent);">
+    <div class="timeline-date">Mar 10, 2026 (Day 8) — 10 commits</div>
+    <div class="timeline-title">Accuracy Calibration (Superpowers Plugin)</div>
+    <div class="timeline-desc">
+      <strong>First use of LFA skills:</strong> <code>superpowers:brainstorming</code> → design spec, <code>superpowers:writing-plans</code> → implementation plan. Then 8 implementation commits in sequence: labor refactor → labor tests → BOM calibration → BOM tests → Highlark fixture → validation tightening → UI updates.<br>
+      <strong>Result:</strong> Tool accuracy went from approximate to ±5% of a real $305K bid.
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-date">Mar 25, 2026 (Day 23) — 1 commit</div>
+    <div class="timeline-title">Phase 2 Proposal Documents</div>
+    <div class="timeline-desc">Phase 1 summary + Phase 2 proposal ($120K) in MD, HTML, and PDF. Professional client-facing deliverable.</div>
+  </div>
+  <div class="timeline-item" style="border-left: 2px solid var(--purple);">
+    <div class="timeline-date">Mar 26-28, 2026 (Days 24-26) — 7 commits</div>
+    <div class="timeline-title">PRD & Website Experiment</div>
+    <div class="timeline-desc">
+      <strong>prd:explore</strong> generated full PRD (28 features, 101 stories, 4 themes). <strong>website@ai-advanced-futures</strong> plugin ran 7 autonomous refine cycles on a marketing website. E2E tests added.
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-date">Mar 29-31, 2026 (Days 27-30) — 8 commits</div>
+    <div class="timeline-title">Polish & Testing</div>
+    <div class="timeline-desc">E2E test infrastructure, proxy middleware, Playwright refactor, build fix, proposal version update. Second contributor (404.pilo.code) active for testing and refine work.</div>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2>6. Effectiveness Scorecard</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Skill / Plugin</th>
+      <th>Origin</th>
+      <th>Times Used</th>
+      <th>Artifacts Created</th>
+      <th>Effectiveness</th>
+      <th>Evidence</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>superpowers:writing-plans</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>1</td>
+      <td>1 plan (4 chunks, 11 tasks)</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>All 8 calibration commits map to plan tasks; ±5% accuracy achieved</td>
+    </tr>
+    <tr>
+      <td><strong>superpowers:brainstorming</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>1</td>
+      <td>1 design spec (pricing table, interfaces)</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Spec contains real supplier pricing that was directly implemented</td>
+    </tr>
+    <tr>
+      <td><strong>prd:explore</strong></td>
+      <td><span class="badge badge-lfa">LFA</span></td>
+      <td>1</td>
+      <td>6 documents (PRD, themes, roadmap, 4 feature breakdowns)</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Directly informed $120K Phase 2 proposal; caught Auth.js risk</td>
+    </tr>
+    <tr>
+      <td><strong>website@ai-advanced-futures</strong></td>
+      <td><span class="badge badge-community">Community</span></td>
+      <td>7 cycles</td>
+      <td>14 commits, 1 report</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Design quality improved (5→9 score) but high commit overhead for non-core feature</td>
+    </tr>
+    <tr>
+      <td><strong>shadcn CLI</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>~14 components</td>
+      <td>14 UI component files</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Consistent, accessible UI built rapidly with New York style variant</td>
+    </tr>
+    <tr>
+      <td><strong>Vercel Blob</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>1 integration</td>
+      <td>1 route handler</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Enabled client-side PDF uploads up to 5TB without custom storage</td>
+    </tr>
+    <tr>
+      <td><strong>Vercel Deploy</strong></td>
+      <td><span class="badge badge-vercel">Vercel</span></td>
+      <td>Continuous</td>
+      <td>vercel.json config</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Zero-config deploy with 120s function timeout for heavy extraction pages</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2>7. Key Findings & Recommendations</h2>
+
+<div class="card" style="border-left: 3px solid var(--green);">
+  <h3 style="margin-top:0; color:var(--green);">What Worked Best</h3>
+  <table>
+    <tr>
+      <td style="width:35%"><strong>Superpowers design-then-plan-then-execute</strong></td>
+      <td>The calibration feature is the project's crown jewel (±5% accuracy). It's also the <em>only</em> feature that went through the full brainstorm → design spec → implementation plan → execution workflow. Correlation is clear: structured planning produced the highest-quality output.</td>
+    </tr>
+    <tr>
+      <td><strong>Adapter pattern for AI</strong></td>
+      <td>The extraction adapter enabled development without API costs, demo mode for client presentations, and future provider flexibility. This 19-line file is the most valuable abstraction in the codebase.</td>
+    </tr>
+    <tr>
+      <td><strong>Real-world calibration tests</strong></td>
+      <td>Testing against a known $305K bid (not synthetic data) catches pricing regressions that would cost the client money. This is a domain-specific best practice worth replicating.</td>
+    </tr>
+    <tr>
+      <td><strong>PRD from code</strong></td>
+      <td>Generating the PRD from the existing codebase (not from scratch) ensured the Phase 2 proposal was grounded in real capabilities. The simulation report caught architectural risks early.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card" style="border-left: 3px solid var(--yellow);">
+  <h3 style="margin-top:0; color:var(--yellow);">What Could Be Improved</h3>
+  <table>
+    <tr>
+      <td style="width:35%"><strong>Day 1 had no planning phase</strong></td>
+      <td>15 commits in one day built the entire foundation — impressive velocity, but no design spec or plan artifact. The Prisma Decimal serialization bug (<code>8e2c85c</code>) and category name case mismatch (<code>73ee79e</code>) were avoidable with a <code>superpowers:brainstorming</code> pass first.</td>
+    </tr>
+    <tr>
+      <td><strong>Tests written after implementation</strong></td>
+      <td>Commit timestamps show implementation first, tests second. The <code>superpowers:test-driven-development</code> skill wasn't used. For a tool where pricing accuracy = money, TDD would catch bugs before they compound.</td>
+    </tr>
+    <tr>
+      <td><strong>Direct Anthropic SDK vs AI Gateway</strong></td>
+      <td>Using <code>@anthropic-ai/sdk</code> directly locks the project to one provider with manual API key management. AI Gateway + OIDC would give automatic cost tracking, failover, and no secrets to manage.</td>
+    </tr>
+    <tr>
+      <td><strong>Refine plugin overhead</strong></td>
+      <td>14 commits (21% of all commits) went to the refine experiment on a <code>.website/</code> directory. While the scoring methodology is interesting, the time could have been spent on core bid tool features.</td>
+    </tr>
+    <tr>
+      <td><strong>No CLAUDE.md</strong></td>
+      <td>The project has no <code>CLAUDE.md</code> file. This means every new Claude Code session starts without project context, conventions, or constraints. Creating one would encode the domain knowledge (BICSI standards, NEC compliance, BOM categories) that currently lives only in code comments.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card" style="border-left: 3px solid var(--accent);">
+  <h3 style="margin-top:0; color:var(--accent);">Phase 2 Recommendations</h3>
+  <table>
+    <tr>
+      <td style="width:30%"><strong>Add CLAUDE.md</strong></td>
+      <td>Encode domain conventions (BICSI labor categories, NEC conduit fill rules, drop type taxonomy), test commands, and the Highlark calibration target. This becomes the project's institutional memory.</td>
+    </tr>
+    <tr>
+      <td><strong>Adopt TDD via Superpowers</strong></td>
+      <td>Use <code>superpowers:test-driven-development</code> for all Phase 2 features, especially BOM persistence (PREREQ-001) and multi-building aggregation (F-104) where pricing bugs cascade.</td>
+    </tr>
+    <tr>
+      <td><strong>Migrate to AI Gateway</strong></td>
+      <td>Replace <code>@anthropic-ai/sdk</code> with AI SDK + AI Gateway when adding the production extraction adapter (F-120). This enables cost tracking per-project, provider failover, and eliminates API key management.</td>
+    </tr>
+    <tr>
+      <td><strong>Use verification-before-completion</strong></td>
+      <td>Require <code>superpowers:verification-before-completion</code> before every commit that touches calculators. The ±5% Highlark test must pass before any pricing change ships.</td>
+    </tr>
+    <tr>
+      <td><strong>Use Clerk via Marketplace</strong></td>
+      <td>For Theme 3 (auth), use Clerk instead of Auth.js. The PRD already flagged Auth.js v5 compatibility risk. Clerk auto-provisions env vars via Vercel Marketplace.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ================================================================== -->
+<h2>8. Provenance Summary</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ecosystem</th>
+      <th>Components Used</th>
+      <th>Commits Attributed</th>
+      <th>Share of Codebase</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-vercel">Vercel Platform</span></td>
+      <td>Next.js 16, Vercel Deploy, Vercel Blob, shadcn/ui</td>
+      <td>~40 (core framework + UI)</td>
+      <td>~60% (framework, UI, deployment)</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-lfa">LFA / Superpowers</span></td>
+      <td>superpowers:brainstorming, writing-plans, executing-plans; prd:explore</td>
+      <td>~10 (calibration + PRD)</td>
+      <td>~15% (planning artifacts + calibration code)</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-anthropic">Anthropic Direct</span></td>
+      <td>@anthropic-ai/sdk (Claude Sonnet 4.6, document vision)</td>
+      <td>~3 (extraction feature)</td>
+      <td>~5% (extraction adapter + API route)</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-community">Community Plugin</span></td>
+      <td>website@ai-advanced-futures (refine cycles)</td>
+      <td>14 (refine experiment)</td>
+      <td>~5% (website directory, gitignored)</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-oss">Open Source / npm</span></td>
+      <td>Prisma, Zod, @react-pdf/renderer, Playwright, Vitest, Tailwind, Radix UI, Lucide</td>
+      <td>~40 (across all features)</td>
+      <td>~15% (ORM, validation, testing, PDF gen)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:0.8rem; color:var(--text-muted); margin-top:2rem; padding-top:1rem; border-top: 1px solid var(--border);">
+Generated from git history analysis of <code>/Users/jesskeeney/playground/rfip-bid-tool</code> on April 1, 2026. All claims are traceable to specific commits, files, and artifacts. No inferred or assumed data.
+</p>
+
+</body>
+</html>

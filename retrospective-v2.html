@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFIP Bid Tool — Development Retrospective v2</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181b24;
+    --surface2: #1e222d;
+    --border: #2a2f3d;
+    --text: #e0e4ec;
+    --text-muted: #8b92a5;
+    --accent: #6c8cff;
+    --green: #34d399;
+    --orange: #fb923c;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --pink: #f472b6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.4rem; margin: 2.5rem 0 1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: var(--text); }
+  p { margin-bottom: 0.75rem; }
+  .subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem; }
+
+  /* Hero Stats */
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .stat-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .stat-card .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+  .badge-platform { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-ai-direct { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .badge-ai-gateway { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge-skill { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge-plugin { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .badge-oss { background: rgba(251,191,36,0.15); color: var(--yellow); }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(108,140,255,0.04); }
+
+  /* Impact bar */
+  .impact-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    min-width: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .impact-bar .fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .fill-high { background: var(--green); }
+  .fill-medium { background: var(--yellow); }
+  .fill-low { background: var(--orange); }
+  .fill-none { background: var(--red); }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin: 1rem 0 2rem;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 1.25rem;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+  }
+  .tl-item.phase-build::before { border-color: var(--green); background: rgba(52,211,153,0.2); }
+  .tl-item.phase-calibrate::before { border-color: var(--yellow); background: rgba(251,191,36,0.2); }
+  .tl-item.phase-refine::before { border-color: var(--purple); background: rgba(167,139,250,0.2); }
+  .tl-item.phase-test::before { border-color: var(--blue); background: rgba(96,165,250,0.2); }
+  .tl-item.phase-docs::before { border-color: var(--orange); background: rgba(251,146,60,0.2); }
+  .tl-date { font-size: 0.75rem; color: var(--text-muted); }
+  .tl-title { font-weight: 600; }
+  .tl-desc { font-size: 0.85rem; color: var(--text-muted); }
+
+  /* Scorecard */
+  .scorecard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .score-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .score-item .score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .score-item .score-label { font-weight: 600; }
+  .score-item .score-value {
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+  .score-high { background: rgba(52,211,153,0.15); color: var(--green); }
+  .score-medium { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .score-low { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .score-none { background: rgba(248,113,113,0.15); color: var(--red); }
+  .score-item .evidence { font-size: 0.8rem; color: var(--text-muted); }
+  .score-item .evidence code { background: var(--surface2); padding: 1px 4px; border-radius: 3px; font-size: 0.78rem; color: var(--text); }
+
+  /* Sections */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+  }
+  .card h3 { margin-top: 0; }
+  ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+  li { margin-bottom: 0.4rem; font-size: 0.9rem; }
+  code { font-family: 'SF Mono', 'Fira Code', monospace; }
+
+  /* Provenance chart */
+  .prov-bar-container {
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+  .prov-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+    min-width: 40px;
+    transition: flex 0.3s;
+  }
+
+  .author-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .author-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .author-card .name { font-weight: 600; font-size: 1rem; }
+  .author-card .detail { font-size: 0.8rem; color: var(--text-muted); }
+
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: repeat(2, 1fr); }
+    .scorecard { grid-template-columns: 1fr; }
+    .author-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>RFIP Bid Tool &mdash; Development Retrospective v2</h1>
+<p class="subtitle">Provenance analysis of the structured cabling bid estimation platform. Generated 2026-04-01.</p>
+
+<!-- =========================================== -->
+<!-- HERO STATS                                  -->
+<!-- =========================================== -->
+<div class="hero">
+  <div class="stat-card">
+    <span class="value">68</span>
+    <span class="label">Commits</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">9,480</span>
+    <span class="label">Lines (non-generated TS/TSX)</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">11</span>
+    <span class="label">Test Files (6 unit + 5 e2e)</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">30 days</span>
+    <span class="label">Build Window (Mar 2 &ndash; Apr 1)</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">2</span>
+    <span class="label">Human Authors</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">41</span>
+    <span class="label">AI Co-Authored Commits</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">7</span>
+    <span class="label">Refine Cycles</span>
+  </div>
+  <div class="stat-card">
+    <span class="value">60%</span>
+    <span class="label">AI-Assisted Commit Rate</span>
+  </div>
+</div>
+
+<!-- =========================================== -->
+<!-- AUTHOR ATTRIBUTION                          -->
+<!-- =========================================== -->
+<h2>Author Attribution</h2>
+<div class="author-grid">
+  <div class="author-card">
+    <div class="name">Jessica Keeney (jessicakeeney@gmail.com)</div>
+    <div class="detail">39 commits &middot; Primary developer &middot; All Phase 1 core features</div>
+    <div class="detail" style="margin-top:0.5rem;">37 commits co-authored with Claude Opus 4.6</div>
+    <div class="detail">Role: Architecture, domain logic, calibration, docs, deployment</div>
+  </div>
+  <div class="author-card">
+    <div class="name">Pilo (404.pilo.code@gmail.com)</div>
+    <div class="detail">28 commits &middot; Contributor via PR #1 (feat/refine-experiment)</div>
+    <div class="detail" style="margin-top:0.5rem;">4 commits co-authored with Claude Sonnet 4.6</div>
+    <div class="detail">Role: UI refine cycles, PRD authoring, e2e tests, website plugin</div>
+  </div>
+</div>
+
+<!-- =========================================== -->
+<!-- PROVENANCE CLASSIFICATION                   -->
+<!-- =========================================== -->
+<h2>Layer 2: Provenance Classification</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dependency</th>
+      <th>Ecosystem</th>
+      <th>Role in Project</th>
+      <th>Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>next@16.1.6</code></td>
+      <td><span class="badge badge-platform">Platform (Vercel)</span></td>
+      <td>App framework, RSC, server actions, routing</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:95%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>@vercel/blob</code></td>
+      <td><span class="badge badge-platform">Platform (Vercel)</span></td>
+      <td>Blueprint file uploads (client-side Blob storage)</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:55%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>vercel.json</code></td>
+      <td><span class="badge badge-platform">Platform (Vercel)</span></td>
+      <td>Function duration config (120s for project routes)</td>
+      <td><div class="impact-bar"><div class="fill fill-low" style="width:30%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>shadcn + radix-ui</code></td>
+      <td><span class="badge badge-platform">Platform (Vercel)</span></td>
+      <td>UI component system (13 components: button, card, dialog, table, tabs, etc.)</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:85%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>@anthropic-ai/sdk</code></td>
+      <td><span class="badge badge-ai-direct">AI Provider (direct)</span></td>
+      <td>Blueprint extraction via Claude API (claude-adapter.ts)</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:75%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>Claude Opus 4.6</code> (co-author)</td>
+      <td><span class="badge badge-ai-direct">AI Provider (direct)</span></td>
+      <td>37 co-authored commits: core architecture, domain logic, tests</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:95%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>Claude Sonnet 4.6</code> (co-author)</td>
+      <td><span class="badge badge-ai-direct">AI Provider (direct)</span></td>
+      <td>4 co-authored commits: UI refine cycles (accessibility, dark mode)</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:45%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>website@ai-advanced-futures</code></td>
+      <td><span class="badge badge-plugin">Agent Plugin</span></td>
+      <td>Enabled in .claude/settings.json; drove 7 refine cycles (design scores 5&rarr;9)</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:80%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>docs/superpowers/</code></td>
+      <td><span class="badge badge-skill">Agent Skills (LFA)</span></td>
+      <td>Accuracy calibration spec + plan (2 artifacts, drove Mar 10 calibration sprint)</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:75%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>docs/prd/</code></td>
+      <td><span class="badge badge-skill">Agent Skills (LFA)</span></td>
+      <td>PRD, roadmap, 4 theme breakdowns &mdash; Phase 2 planning artifacts</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:60%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>@prisma/client + prisma</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Database ORM &mdash; 11 models (178-line schema), seed data, migrations</td>
+      <td><div class="impact-bar"><div class="fill fill-high" style="width:85%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>@react-pdf/renderer</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Proposal PDF generation (10 standard bid sections)</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:55%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>zod</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Runtime validation schemas for all domain types</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:50%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>vitest</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Unit test runner (6 test files, 567 lines)</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:50%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>@playwright/test</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>E2E test framework (5 spec files, 1285 lines)</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:55%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>tailwindcss@4 + tw-animate-css</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Styling system, animation utilities</td>
+      <td><div class="impact-bar"><div class="fill fill-medium" style="width:60%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>lucide-react</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Icon library used across all UI components</td>
+      <td><div class="impact-bar"><div class="fill fill-low" style="width:30%"></div></div></td>
+    </tr>
+    <tr>
+      <td><code>date-fns, sonner, next-themes, clsx, tailwind-merge</code></td>
+      <td><span class="badge badge-oss">OSS</span></td>
+      <td>Utility libraries (dates, toasts, theming, classnames)</td>
+      <td><div class="impact-bar"><div class="fill fill-low" style="width:25%"></div></div></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Provenance share bar -->
+<h3>Ecosystem Share (by dependency count)</h3>
+<div class="prov-bar-container">
+  <div class="prov-segment" style="flex:4; background:#34d399;">Platform</div>
+  <div class="prov-segment" style="flex:3; background:#fb923c;">AI Direct</div>
+  <div class="prov-segment" style="flex:2; background:#60a5fa;">Skills</div>
+  <div class="prov-segment" style="flex:1; background:#a78bfa;">Plugin</div>
+  <div class="prov-segment" style="flex:8; background:#fbbf24; color:#1e222d;">OSS</div>
+</div>
+<p style="font-size:0.8rem; color:var(--text-muted);">
+  Platform vendor (Vercel): 4 deps &middot; AI direct: 3 (SDK + 2 co-author models) &middot; Agent skills: 2 dirs &middot; Agent plugin: 1 &middot; OSS: 8 deps
+</p>
+
+<!-- =========================================== -->
+<!-- TIMELINE RECONSTRUCTION                     -->
+<!-- =========================================== -->
+<h2>Layer 3: Timeline Reconstruction</h2>
+
+<div class="timeline">
+  <div class="tl-item phase-build">
+    <div class="tl-date">Mar 2, 10:37 AM</div>
+    <div class="tl-title">Phase 1 Kickoff &mdash; Scaffold + Data Layer</div>
+    <div class="tl-desc">Next.js + Prisma + shadcn/ui scaffold. Schema (11 models), types, Zod schemas, seed data (38 SKUs). <strong>6 commits in 2 hours.</strong></div>
+  </div>
+
+  <div class="tl-item phase-build">
+    <div class="tl-date">Mar 2, 11:24 AM &ndash; 1:51 PM</div>
+    <div class="tl-title">Domain Engine Build</div>
+    <div class="tl-desc">Blueprint extraction adapter, conduit fill calculator (NEC/TIA), BICSI labor calculator, BOM generator, server actions. <strong>8 commits, all co-authored with Claude Opus.</strong></div>
+  </div>
+
+  <div class="tl-item phase-build">
+    <div class="tl-date">Mar 2, 1:17 PM &ndash; 4:39 PM</div>
+    <div class="tl-title">UI Layer + Deployment</div>
+    <div class="tl-desc">Dashboard, project detail (5 tabs), materials page, proposal PDF generator. Fix RSC serialization. Deploy to Vercel.</div>
+  </div>
+
+  <div class="tl-item phase-build">
+    <div class="tl-date">Mar 3 &ndash; Mar 4</div>
+    <div class="tl-title">Feature Expansion</div>
+    <div class="tl-desc">Claude API integration for blueprint extraction, BOM expansion (13 categories), demo seed project, quick-start creation, delete with confirmation. Observability + labor rate calibration.</div>
+  </div>
+
+  <div class="tl-item phase-calibrate">
+    <div class="tl-date">Mar 10, 12:04 PM &ndash; 1:22 PM</div>
+    <div class="tl-title">Accuracy Calibration Sprint</div>
+    <div class="tl-desc">Design spec &rarr; implementation plan &rarr; dual cost/sell rates &rarr; cable grade mixing &rarr; Highlark validation to +/-5%. <strong>Superpowers-driven: spec-first, then code, then tests.</strong> 10 commits in 90 minutes.</div>
+  </div>
+
+  <div class="tl-item phase-docs">
+    <div class="tl-date">Mar 25</div>
+    <div class="tl-title">Phase 1 Summary + Phase 2 Proposal ($120K)</div>
+    <div class="tl-desc">Documentation milestone. MD, HTML, and PDF outputs for client delivery.</div>
+  </div>
+
+  <div class="tl-item phase-test">
+    <div class="tl-date">Mar 26</div>
+    <div class="tl-title">E2E Test Suite + PRD</div>
+    <div class="tl-desc">Playwright e2e tests (materials, navigation, projects). Product Requirements Document authored. Second contributor (Pilo) enters.</div>
+  </div>
+
+  <div class="tl-item phase-docs">
+    <div class="tl-date">Mar 28, 7:43 AM &ndash; 9:09 AM</div>
+    <div class="tl-title">PRD + Roadmap Expansion</div>
+    <div class="tl-desc">PRD updated. Roadmap themes added. 4 feature theme breakdowns (Workflow Readiness, Complex Project Support, Team Security, Data Intelligence).</div>
+  </div>
+
+  <div class="tl-item phase-refine">
+    <div class="tl-date">Mar 28, 11:12 AM &ndash; Mar 29, 7:20 AM</div>
+    <div class="tl-title">Website Refine Experiment (7 cycles)</div>
+    <div class="tl-desc">website@ai-advanced-futures plugin enabled. 7 automated refine cycles. Design quality: 5&rarr;9, originality: 4&rarr;9, accessibility: 4&rarr;9. Cycle 6 pivoted to Fluent design language.</div>
+  </div>
+
+  <div class="tl-item phase-test">
+    <div class="tl-date">Mar 29 &ndash; Mar 30</div>
+    <div class="tl-title">Test Infrastructure Hardening</div>
+    <div class="tl-desc">E2E test refactor, project lifecycle tests, global setup, request ID middleware, e2e utilities.</div>
+  </div>
+
+  <div class="tl-item phase-docs">
+    <div class="tl-date">Mar 31 &ndash; Apr 1</div>
+    <div class="tl-title">Merge + Finalization</div>
+    <div class="tl-desc">PR #1 merged. Build fix. Phase 2 proposal updated to v2.0 with risk-informed estimates. Retrospective v1 generated.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Planning vs. Implementation Sequence</h3>
+  <p><strong>Phase 1 (Mar 2&ndash;4):</strong> Implementation-first. No design doc preceded the initial build. 22 feature commits in 3 days, all driven by domain knowledge and Claude Opus co-authoring. Effective but risky &mdash; no spec to validate against.</p>
+  <p><strong>Calibration Sprint (Mar 10):</strong> Spec-first. The superpowers methodology was applied: <code>docs/superpowers/specs/2026-03-10-accuracy-calibration-design.md</code> was written before <code>docs/superpowers/plans/2026-03-10-accuracy-calibration.md</code>, which preceded implementation. Tests followed immediately. <strong>This was the most disciplined development phase.</strong></p>
+  <p><strong>Phase 2 Planning (Mar 26&ndash;28):</strong> PRD and roadmap written after Phase 1 was complete. Planning served Phase 2 scoping, not Phase 1 execution.</p>
+  <p><strong>Tests:</strong> Unit tests appeared on Mar 10 (with calibration), e2e tests on Mar 26. Tests were written <em>after</em> code for the initial build, and <em>with</em> code during calibration.</p>
+</div>
+
+<!-- =========================================== -->
+<!-- EFFECTIVENESS SCORING                       -->
+<!-- =========================================== -->
+<h2>Layer 4: Effectiveness Scoring</h2>
+
+<div class="scorecard">
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Claude Opus 4.6 Co-Authoring</span>
+      <span class="score-value score-high">HIGH</span>
+    </div>
+    <div class="evidence">
+      37 of 40 jessicakeeney commits co-authored. Entire domain engine (BOM, labor, conduit fill, extraction) built in one day (Mar 2: commits <code>aaee90c</code>&ndash;<code>e0b564b</code>). Calibration sprint delivered +/-5% accuracy target (<code>2af90d1</code>).
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">website@ai-advanced-futures Plugin</span>
+      <span class="score-value score-high">HIGH</span>
+    </div>
+    <div class="evidence">
+      7 refine cycles with measurable score progression: design_quality 5&rarr;9, originality 4&rarr;9 (<code>b7c6e16</code>). Cycle 6 executed a pivot to Fluent design (<code>c04590d</code>). Automated scoring enforced quality gates each cycle.
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Superpowers: Spec-First Development</span>
+      <span class="score-value score-high">HIGH</span>
+    </div>
+    <div class="evidence">
+      Used once (Mar 10 calibration). Produced design spec (<code>3455556</code>) and implementation plan (<code>2c732fb</code>) before code. Result: 10 commits, dual rate structure, +/-5% validation &mdash; the most disciplined sprint in the project.
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Vercel Platform (Next.js + Blob)</span>
+      <span class="score-value score-high">HIGH</span>
+    </div>
+    <div class="evidence">
+      RSC + server actions eliminated API boilerplate. Blob enabled client-side blueprint uploads (<code>c934217</code>). Deployment on day 1 (<code>909335d</code>: build script fix). <code>vercel.json</code> maxDuration config for long-running extraction.
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Prisma ORM</span>
+      <span class="score-value score-high">HIGH</span>
+    </div>
+    <div class="evidence">
+      178-line schema defining 11 models. Seed script (374 lines) with 38 SKUs + demo project. Migration system used. One RSC serialization bug hit and fixed same day (<code>8e2c85c</code>).
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Playwright E2E Tests</span>
+      <span class="score-value score-medium">MEDIUM</span>
+    </div>
+    <div class="evidence">
+      5 spec files, 1,285 lines. Added Mar 26&ndash;30 by second contributor. Refactored once (<code>ec55675</code>). Build exclusion needed (<code>bc8e4c7</code>). <strong>Written 24 days after initial code</strong> &mdash; limited value for catching regressions during Phase 1.
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">Vitest Unit Tests</span>
+      <span class="score-value score-medium">MEDIUM</span>
+    </div>
+    <div class="evidence">
+      6 test files, 567 lines. BOM generator, conduit fill, labor, extraction adapter, Highlark validation, materials filters. Appeared Mar 10 during calibration &mdash; <strong>8 days after initial domain engine was built.</strong>
+    </div>
+  </div>
+
+  <div class="score-item">
+    <div class="score-header">
+      <span class="score-label">PRD / Roadmap Artifacts</span>
+      <span class="score-value score-medium">MEDIUM</span>
+    </div>
+    <div class="evidence">
+      Comprehensive PRD with 4 themed feature breakdowns (<code>docs/prd/</code>). Written Mar 26&ndash;28 &mdash; <strong>after Phase 1 was complete.</strong> Influenced Phase 2 proposal pricing ($120K) but did not guide Phase 1 implementation.
+    </div>
+  </div>
+</div>
+
+<!-- =========================================== -->
+<!-- GAP ANALYSIS                                -->
+<!-- =========================================== -->
+<h2>Layer 5: Gap Analysis</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Gap</th>
+      <th>Skill/Practice</th>
+      <th>Evidence</th>
+      <th>Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>No CLAUDE.md</td>
+      <td>Project context persistence</td>
+      <td><code>CLAUDE.md</code> not found in repo root. Context lost between sessions.</td>
+      <td>Each Claude session starts cold. Architecture decisions, coding conventions, and domain terminology must be re-explained.</td>
+    </tr>
+    <tr>
+      <td>Tests after code (Phase 1)</td>
+      <td>superpowers: test-driven-development</td>
+      <td>Phase 1 features (Mar 2&ndash;4) had zero tests. Unit tests first appeared Mar 10 (<code>b00d651</code>). E2E tests Mar 26 (<code>b9460de</code>).</td>
+      <td>The RSC serialization bug (<code>8e2c85c</code>) was caught manually, not by tests. Other regressions may have been missed.</td>
+    </tr>
+    <tr>
+      <td>No spec for Phase 1 build</td>
+      <td>superpowers: brainstorming + spec-first</td>
+      <td>22 feature commits Mar 2&ndash;4 with no preceding design doc. Contrast with Mar 10 calibration which had <code>docs/superpowers/specs/</code>.</td>
+      <td>Phase 1 worked because of strong domain knowledge, but lacked a reviewable spec. The calibration sprint proved spec-first is more disciplined.</td>
+    </tr>
+    <tr>
+      <td>No CI/CD pipeline evidence</td>
+      <td>superpowers: verification-before-completion</td>
+      <td>No <code>.github/workflows/</code>, no <code>vercel.json</code> build checks beyond function config. No evidence of automated test runs in commit history.</td>
+      <td>Tests exist but no evidence they run automatically before merge. PR #1 was merged without CI gates.</td>
+    </tr>
+    <tr>
+      <td>No error monitoring</td>
+      <td>Observability tooling</td>
+      <td><code>src/lib/logger.ts</code> exists (added <code>60ae6fe</code>) but no Sentry, LogRocket, or equivalent in <code>package.json</code>.</td>
+      <td>Production errors would only be visible in Vercel function logs. No alerting or user session replay.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- =========================================== -->
+<!-- WHAT WORKED / IMPROVE / RECOMMENDATIONS     -->
+<!-- =========================================== -->
+<h2>What Worked</h2>
+<div class="card">
+  <ul>
+    <li><strong>Velocity:</strong> Full CRUD app with domain-specific calculators (BOM, labor, conduit fill, NEC/TIA compliance) built and deployed in one day (Mar 2). 17 feature commits in 6 hours.</li>
+    <li><strong>Claude Opus co-authoring:</strong> 37 co-authored commits spanning schema design, domain logic, UI, and deployment. Consistent commit message quality (conventional commits format).</li>
+    <li><strong>Spec-first calibration (Mar 10):</strong> Design spec before plan before code before tests. Achieved +/-5% accuracy against a real-world estimate (Highlark Hotel). The superpowers methodology worked when applied.</li>
+    <li><strong>Refine plugin:</strong> 7 automated cycles with quantified scoring drove design quality from 5 to 9. The cycle-6 pivot to Fluent design language shows the plugin can make non-trivial design decisions.</li>
+    <li><strong>Two-contributor model:</strong> Clean separation of concerns between primary dev (core features) and second contributor (UI polish, e2e tests, PRD). PR-based integration.</li>
+    <li><strong>Domain depth:</strong> BICSI-aligned labor rates, NEC conduit fill calculations, 38 real SKUs, 13 BOM categories. Not a toy &mdash; built with industry-accurate domain knowledge.</li>
+  </ul>
+</div>
+
+<h2>What to Improve</h2>
+<div class="card">
+  <ul>
+    <li><strong>Add CLAUDE.md:</strong> Document architecture decisions, coding conventions, domain glossary (drops, runs, BOM categories), and testing strategy. Every AI session should start with full context.</li>
+    <li><strong>Test-first for new features:</strong> The calibration sprint proved spec &rarr; plan &rarr; code &rarr; test works. Apply this to all Phase 2 features, not just accuracy work.</li>
+    <li><strong>CI pipeline:</strong> Add GitHub Actions with <code>vitest run</code> and <code>playwright test</code> gates before merge. The test infrastructure exists but is not enforced.</li>
+    <li><strong>Error monitoring:</strong> Add Sentry or Vercel's built-in error tracking before Phase 2 goes live. The logger exists but has no external sink.</li>
+    <li><strong>Phase 1 had no spec:</strong> Write a brief architecture decision record (ADR) retroactively. For Phase 2, apply the superpowers spec-first pattern to each theme.</li>
+  </ul>
+</div>
+
+<h2>Recommendations for Phase 2</h2>
+<div class="card">
+  <ol style="padding-left:1.25rem;">
+    <li><strong>Create CLAUDE.md</strong> in repo root with project context, domain glossary, and conventions before starting Phase 2 development.</li>
+    <li><strong>Apply superpowers spec-first to all 4 themes:</strong> Each theme in <code>docs/prd/features/</code> should get a <code>docs/superpowers/specs/</code> design doc before implementation begins.</li>
+    <li><strong>Set up CI:</strong> GitHub Actions running <code>npm run test</code> and <code>npm run build</code> on every PR. Add Playwright to a scheduled nightly run if too slow for PR checks.</li>
+    <li><strong>Continue the refine plugin:</strong> The design score progression (5&rarr;9) was the most measurable quality improvement in the project. Use it for each new UI feature.</li>
+    <li><strong>Add error monitoring:</strong> Vercel Monitoring or Sentry. The $120K Phase 2 proposal demands production-grade observability.</li>
+    <li><strong>Formalize the two-contributor workflow:</strong> PR #1 worked well. Define branch naming, review expectations, and merge criteria for Phase 2 collaboration.</li>
+  </ol>
+</div>
+
+<!-- =========================================== -->
+<!-- REFINE CYCLE DETAIL                         -->
+<!-- =========================================== -->
+<h2>Appendix: Refine Cycle Progression</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Cycle</th>
+      <th>Design</th>
+      <th>Originality</th>
+      <th>Craft</th>
+      <th>Function</th>
+      <th>A11y</th>
+      <th>Directive</th>
+      <th>Key Change</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>5</td><td>4</td><td>6</td><td>6</td><td>4</td><td>refine</td><td>Accessibility fixes, dark mode, status colors</td></tr>
+    <tr><td>2</td><td>6</td><td>4</td><td>7</td><td>7</td><td>6</td><td>refine</td><td>Brand color, Textarea component, a11y improvements</td></tr>
+    <tr><td>3</td><td>7</td><td>5</td><td>7</td><td>7</td><td>7</td><td>refine</td><td>Badge colors, nav indicator, logo icon, empty state</td></tr>
+    <tr><td>4</td><td>8</td><td>6</td><td>7</td><td>7</td><td>7</td><td>refine</td><td>Status-colored borders, icon stats, logo badge</td></tr>
+    <tr><td>5</td><td>8</td><td>7</td><td>7</td><td>7</td><td>7</td><td>refine</td><td>(score-only commit)</td></tr>
+    <tr><td>6</td><td style="color:var(--green);font-weight:700;">9</td><td>8</td><td style="color:var(--green);font-weight:700;">9</td><td>8</td><td>8</td><td style="color:var(--purple);font-weight:700;">pivot</td><td>Force light theme, Fluent elevation + acrylic nav, card redesign</td></tr>
+    <tr><td>7</td><td style="color:var(--green);font-weight:700;">9</td><td style="color:var(--green);font-weight:700;">9</td><td style="color:var(--green);font-weight:700;">9</td><td style="color:var(--green);font-weight:700;">9</td><td style="color:var(--green);font-weight:700;">9</td><td>refine</td><td>Originality, functionality, accessibility final polish</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top:2rem; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+  Generated by Claude Opus 4.6 retrospective-provenance analysis &middot; 2026-04-01 &middot; RFIP Bid Tool v0.1.0
+</p>
+
+</body>
+</html>
